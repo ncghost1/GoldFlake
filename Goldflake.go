@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	// GMT+8 2022-5-11 11:07:55
-	epoch int64 = 1652238475000
+	// GMT+8 2022-5-12 00:00:00
+	epoch int64 = 1652284800000
 
 	numWorkerBits = 10
 
@@ -37,7 +37,7 @@ type GoldFlake struct {
 
 // Random Value(TimeOffset) Stack
 type RandValStack struct {
-	RandVal []uint64
+	RandVal []uint64 // We use slice to simulate stack space
 	top     uint32
 	Size    uint32
 	flag    int8
@@ -46,11 +46,13 @@ type RandValStack struct {
 
 var RVStack RandValStack
 
+// Pack and return UUID
 func (gf *GoldFlake) pack() uint64 {
 	uuid := (gf.lastTimestamp << (numWorkerBits + numSequenceBits)) | (uint64(gf.workerId) << numSequenceBits) | (uint64(gf.sequence))
 	return uuid
 }
 
+// Create and init a GoldFlake node
 func New(workerId uint32) (*GoldFlake, error) {
 	if workerId < 0 || workerId > MaxWorkId {
 		return nil, errors.New("invalid worker Id")
@@ -58,6 +60,13 @@ func New(workerId uint32) (*GoldFlake, error) {
 	return &GoldFlake{workerId: workerId}, nil
 }
 
+// Initialize Random Value Stack
+// if 'UseSignal' is 1, we set the 'RandProcessSignalEnable' bit of flag,
+// It means that we will use flag to notify whether a new millisecond has arrived.
+// Else, we set the 'RandProcessSignalDisable' bit of flag,
+// It means that we will not use flag to notify whether a new millisecond has arrived,
+// but we will use time.Sleep(), which is not an accurate method,
+// because it is affected by many factors such as OS and hardware.
 func initRandValStack(Size uint32, UseSignal int8) {
 	RVStack.lock.Lock()
 	defer RVStack.lock.Unlock()
@@ -72,6 +81,11 @@ func initRandValStack(Size uint32, UseSignal int8) {
 	}
 }
 
+// Push random value into the stack with probability.
+// We use fractional form to express probability,
+// The probability is chanceNumerator / chanceDenominator.
+// maxTimeOffset is the max millisecond time offset,
+// We randomly pick an uint64 value from 1 to max and push into the stack.
 func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error {
 	rand.Seed(time.Now().UnixNano())
 	RVStack.lock.Lock()
@@ -92,6 +106,7 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 	return nil
 }
 
+// Generate and return an UUID
 func (gf *GoldFlake) Generate() (uint64, error) {
 	gf.lock.Lock()
 	defer gf.lock.Unlock()
@@ -108,6 +123,9 @@ func (gf *GoldFlake) Generate() (uint64, error) {
 			ts = gf.waitNextMilli(ts) + gf.timeOffset
 		}
 	} else {
+		// It's a new millisecond.
+		// If we use the signal method to remind the execution of RandProcess,
+		// then we need to set RandProcessSignalEnable to 1.
 		if RVStack.flag&RandProcessSignalDisable == 0 {
 			RVStack.flag |= RandProcessSignalEnable
 		}
@@ -129,11 +147,18 @@ func (gf *GoldFlake) waitNextMilli(ts uint64) uint64 {
 	return ts
 }
 
-// timestamp
+// Get the timestamp,
+// this is not the actual millisecond timestamp,
+// because we subtract the epoch(The timestamp we want to use as the base)
 func timestamp() uint64 {
 	return uint64(time.Now().UnixNano()/int64(1000000) - epoch)
 }
 
+// *****************************
+//        GoldFlake API
+// *****************************
+
+// Initialize a GoldFlake node
 func InitGfNode(workerid uint32) (*GoldFlake, error) {
 	GfNode, err := New(workerid)
 	if err != nil {
@@ -141,10 +166,6 @@ func InitGfNode(workerid uint32) (*GoldFlake, error) {
 	}
 	return GfNode, nil
 }
-
-// *****************************
-//        GoldFlake API
-// *****************************
 
 // InitRandProcess
 // "Size" is the RandValStack's Size,
@@ -157,7 +178,9 @@ func InitRandProcess(Size uint32, UseSignal int8) {
 }
 
 // RandProcess
-// Please Use a goroutine and for loop this after InitRandProcess:
+// When we choose to use the signal method to initialize the stack, we use this.
+// Note: When using Goldflake, this function needs to keep running independently.
+// Please Use a goroutine and loop this after InitRandProcess:
 // For example:
 //	go func() {
 //		for {
@@ -165,15 +188,19 @@ func InitRandProcess(Size uint32, UseSignal int8) {
 //		}
 //	}
 func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error {
-	fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 // IntervalRandProcess
 // The parameter "Interval" is the time of Sleep.
 // Attention: Sleep is not exact, if you want to use this function please test your own machine.
-// We have provided the relevant tests in the "_test" file.
-// Please Use a goroutine and for loop this after InitRandProcess:
+// We have provided the relevant output "IntervalRandProcess Execution Count" in the "Goldflake_test" file.
+// Note: When using Goldflake, this function needs to keep running independently.
+// Please Use a goroutine and loop this after InitRandProcess:
 // For example:
 //	go func() {
 //		for {
@@ -181,13 +208,15 @@ func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error
 //		}
 //	}
 func IntervalRandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64, Interval time.Duration) error {
-	fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	if err != nil {
+		return err
+	}
 	time.Sleep(Interval)
 	return nil
 }
 
-// GenerateId
-// Generate a GoldFlake ID.
+// Generate an UUID.
 func GenerateId(sf *GoldFlake) (uint64, error) {
 	uuid, err := sf.Generate()
 	if err != nil {
