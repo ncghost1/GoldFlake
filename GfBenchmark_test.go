@@ -36,6 +36,7 @@ func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
@@ -66,6 +67,7 @@ func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
@@ -96,6 +98,7 @@ func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkGenerateIdWithRandProcess_2(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
