@@ -6,6 +6,21 @@ import (
 	"time"
 )
 
+func BenchmarkNormalGenerateId(b *testing.B) {
+	var workerid uint32
+	Gf, err := InitGfNode(workerid)
+	if err != nil {
+		b.Errorf("Init GoldFlake node error:%s", err)
+		return
+	}
+	for i := 0; i < b.N; i++ {
+		_, err := Gf.Generate()
+		if err != nil {
+			b.Errorf("Generate id error:%s", err)
+			return
+		}
+	}
+}
 func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5

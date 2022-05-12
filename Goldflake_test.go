@@ -7,6 +7,27 @@ import (
 	"time"
 )
 
+func TestNormalGenerateId(t *testing.T) {
+	var workerid uint32
+	Gf, err := InitGfNode(workerid)
+	count := 0
+	if err != nil {
+		t.Errorf("Init GoldFlake node error:%s", err)
+		return
+	}
+	go func() {
+		for {
+			_, err := Gf.Generate()
+			if err != nil {
+				t.Errorf("Generate id error:%s", err)
+				return
+			}
+			count++
+		}
+	}()
+	time.Sleep(time.Second)
+	fmt.Println("TestNormalGenerateId: Number of generated ID:", count)
+}
 func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
