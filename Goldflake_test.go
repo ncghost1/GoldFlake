@@ -28,6 +28,7 @@ func TestNormalGenerateId(t *testing.T) {
 	time.Sleep(time.Second)
 	fmt.Println("TestNormalGenerateId: Number of generated ID:", count)
 }
+
 func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5

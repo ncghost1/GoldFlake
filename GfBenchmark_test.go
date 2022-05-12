@@ -21,6 +21,7 @@ func BenchmarkNormalGenerateId(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
