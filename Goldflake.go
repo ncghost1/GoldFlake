@@ -57,6 +57,7 @@ func New(workerId uint32) (*GoldFlake, error) {
 	}
 	return &GoldFlake{workerId: workerId}, nil
 }
+
 func initRandValStack(Size uint32, UseSignal int8) {
 	RVStack.lock.Lock()
 	defer RVStack.lock.Unlock()
@@ -70,6 +71,7 @@ func initRandValStack(Size uint32, UseSignal int8) {
 		RVStack.flag |= RandProcessSignalDisable
 	}
 }
+
 func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error {
 	rand.Seed(time.Now().UnixNano())
 	RVStack.lock.Lock()
