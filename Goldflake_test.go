@@ -45,6 +45,7 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	fmt.Println("TestGenerateIdWithIntervalRandProcess: Number of generated ID:", count)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess: IntervalRandProcess Execution Count:", Randcnt)
 }
+
 func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
