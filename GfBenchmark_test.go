@@ -13,6 +13,7 @@ func BenchmarkNormalGenerateId(b *testing.B) {
 		b.Errorf("Init GoldFlake node error:%s", err)
 		return
 	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := Gf.Generate()
 		if err != nil {
