@@ -127,7 +127,7 @@ for {
 			fmt.Println(err)
 			return
 		}
-		SendGenerateIdResponse(uid)
+		sendGenerateIdResponse(uid)
 	}
 }
 ```
