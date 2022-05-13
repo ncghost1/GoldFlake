@@ -122,7 +122,12 @@ for {
 		}
 	}()
 	if getGenerateIdRequest() != nil {
-		GenerateId()
+		uid, err := Gf.Generate()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		SendGenerateIdResponse(uid)
 	}
 }
 ```
