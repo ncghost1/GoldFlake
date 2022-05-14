@@ -191,13 +191,12 @@ func InitRandProcess(Size uint32, UseSignal int8) {
 //		}
 //	}
 func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error {
-	for {
-		err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
-		if err != nil {
-			return err
-		}
-		return nil
+	err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	if err != nil {
+		return err
 	}
+	return nil
+	
 }
 
 // IntervalRandProcess
