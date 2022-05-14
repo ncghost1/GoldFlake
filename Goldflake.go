@@ -27,6 +27,8 @@ const (
 
 	RandProcessSignalDisable = 1 << 1
 
+	RandProcessSync = 1 << 1 // same affect as RandProcessSignalDisable
+
 	RandProcessOccupying = 1 << 2
 
 	GenerateProcessOccupying = 1 << 3
@@ -71,18 +73,18 @@ func New(workerId uint32) (*GoldFlake, error) {
 }
 
 // Initialize Random Value Stack
-// if 'UseSignal' is 1, we set the 'RandProcessSignalEnable' bit of flag,
+// if 'Mode' is RandProcessSignalEnable, we set the 'RandProcessSignalEnable' bit of flag,
 // It means that we will use flag to notify whether a new millisecond has arrived.
 // Else, we set the 'RandProcessSignalDisable' bit of flag,
 // It means that we will not use flag to notify whether a new millisecond has arrived,
 // but we will use time.Sleep(), which is not an accurate method,
 // because it is affected by many factors such as OS and hardware.
-func initRandValStack(Size uint32, UseSignal int8) {
+func initRandValStack(Size uint32, Mode int8) {
 	RVStack.RandVal = make([]uint64, Size)
 	RVStack.top = 0
 	RVStack.Size = Size
 	RVStack.flag = 0
-	if UseSignal == 1 {
+	if Mode == RandProcessSignalEnable {
 		RVStack.flag |= RandProcessSignalEnable
 	} else {
 		RVStack.flag |= RandProcessSignalDisable
@@ -120,6 +122,7 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 }
 
 // Generate and return an UUID
+// Do not use this with SyncGenerateAndRand together.
 func (gf *GoldFlake) Generate() (uint64, error) {
 	gf.lock.Lock()
 	defer gf.lock.Unlock()
@@ -141,6 +144,40 @@ func (gf *GoldFlake) Generate() (uint64, error) {
 		// then we need to set RandProcessSignalEnable to 1.
 		if RVStack.flag&RandProcessSignalDisable == 0 {
 			RVStack.flag |= RandProcessSignalEnable
+		}
+		gf.sequence = 0
+	}
+
+	if ts < gf.lastTimestamp {
+		return 0, errors.New("invalid system clock")
+	}
+	gf.lastTimestamp = ts
+	return gf.pack(), nil
+}
+
+// When we generate ID, fillwithrandvalstack is executed synchronously every new millisecond timestamp.
+// Use InitRandProcess before using SyncGenerateAndRand,make user
+// Do not use this with Generate together.
+func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, maxTimeOffset uint64) (uint64, error) {
+	gf.lock.Lock()
+	defer gf.lock.Unlock()
+	RVStack.flag |= GenerateProcessOccupying
+	if RVStack.flag&RandProcessOccupying == 0 && atomic.LoadUint32(&RVStack.top) > 0 {
+		gf.timeOffset += RVStack.RandVal[RVStack.top-1]
+		RVStack.top--
+	}
+	RVStack.flag &= ^GenerateProcessOccupying
+	ts := timestamp() + gf.timeOffset
+	if ts == gf.lastTimestamp {
+		gf.sequence = (gf.sequence + 1) & MaxSequence
+		if gf.sequence == 0 {
+			ts = gf.waitNextMilli(ts) + gf.timeOffset
+		}
+	} else {
+		// It's a new millisecond.
+		_, err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+		if err != nil {
+			return 0, err
 		}
 		gf.sequence = 0
 	}
@@ -232,13 +269,4 @@ func IntervalRandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint6
 	}
 	time.Sleep(Interval)
 	return status, err
-}
-
-// Generate an UUID.
-func GenerateId(sf *GoldFlake) (uint64, error) {
-	uuid, err := sf.Generate()
-	if err != nil {
-		return 0, err
-	}
-	return uuid, nil
 }

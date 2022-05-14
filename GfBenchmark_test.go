@@ -27,10 +27,10 @@ func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
 	var stacksize uint32 = 5
-	var useSignal int8 = 1
+	var useSignal int8 = RandProcessSignalDisable
 	coreNum := 1
 	runtime.GOMAXPROCS(coreNum)
-	Gf, err := New(workerid)
+	Gf, err := InitGfNode(workerid)
 	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
@@ -59,7 +59,7 @@ func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 		case <-done:
 			return
 		default:
-			_, err := GenerateId(Gf)
+			_, err := Gf.Generate()
 			if err != nil {
 				b.Errorf("GenerateId error:%s", err)
 				return
@@ -73,10 +73,10 @@ func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
 	var stacksize uint32 = 5
-	var useSignal int8 = 1
+	var useSignal int8 = RandProcessSignalDisable
 	coreNum := 2
 	runtime.GOMAXPROCS(coreNum)
-	Gf, err := New(workerid)
+	Gf, err := InitGfNode(workerid)
 	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
@@ -105,7 +105,7 @@ func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
 		case <-done:
 			return
 		default:
-			_, err := GenerateId(Gf)
+			_, err := Gf.Generate()
 			if err != nil {
 				b.Errorf("GenerateId error:%s", err)
 				return
@@ -119,10 +119,10 @@ func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
 	var stacksize uint32 = 5
-	var useSignal int8 = 1
+	var useSignal int8 = RandProcessSignalEnable
 	coreNum := 1
 	runtime.GOMAXPROCS(coreNum)
-	Gf, err := New(workerid)
+	Gf, err := InitGfNode(workerid)
 	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
@@ -151,7 +151,7 @@ func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
 		case <-done:
 			return
 		default:
-			_, err := GenerateId(Gf)
+			_, err := Gf.Generate()
 			if err != nil {
 				b.Errorf("GenerateId error:%s", err)
 				return
@@ -165,10 +165,10 @@ func BenchmarkGenerateIdWithRandProcess_2(b *testing.B) {
 	var workerid uint32 = 1
 	var maxtimeoffset uint64 = 5
 	var stacksize uint32 = 5
-	var useSignal int8 = 1
+	var useSignal int8 = RandProcessSignalEnable
 	coreNum := 2
 	runtime.GOMAXPROCS(coreNum)
-	Gf, err := New(workerid)
+	Gf, err := InitGfNode(workerid)
 	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
@@ -197,7 +197,67 @@ func BenchmarkGenerateIdWithRandProcess_2(b *testing.B) {
 		case <-done:
 			return
 		default:
-			_, err := GenerateId(Gf)
+			_, err := Gf.Generate()
+			if err != nil {
+				b.Errorf("GenerateId error:%s", err)
+				return
+			}
+		}
+	}
+	close(done)
+}
+
+func BenchmarkSyncGenerateAndRand(b *testing.B) {
+	var workerid uint32 = 1
+	var maxtimeoffset uint64 = 5
+	var stacksize uint32 = 5
+	var useSignal int8 = RandProcessSync
+	coreNum := 1
+	runtime.GOMAXPROCS(coreNum)
+	Gf, err := InitGfNode(workerid)
+	done := make(chan bool)
+	if err != nil {
+		b.Errorf("Create Goldflake node error:%s", err)
+		return
+	}
+	InitRandProcess(stacksize, useSignal)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		select {
+		case <-done:
+			return
+		default:
+			_, err := Gf.SyncGenerateAndRand(1, 2, maxtimeoffset)
+			if err != nil {
+				b.Errorf("GenerateId error:%s", err)
+				return
+			}
+		}
+	}
+	close(done)
+}
+
+func BenchmarkSyncGenerateAndRand_2(b *testing.B) {
+	var workerid uint32 = 1
+	var maxtimeoffset uint64 = 5
+	var stacksize uint32 = 5
+	var useSignal int8 = RandProcessSync
+	coreNum := 2
+	runtime.GOMAXPROCS(coreNum)
+	Gf, err := InitGfNode(workerid)
+	done := make(chan bool)
+	if err != nil {
+		b.Errorf("Create Goldflake node error:%s", err)
+		return
+	}
+	InitRandProcess(stacksize, useSignal)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		select {
+		case <-done:
+			return
+		default:
+			_, err := Gf.SyncGenerateAndRand(1, 2, maxtimeoffset)
 			if err != nil {
 				b.Errorf("GenerateId error:%s", err)
 				return
