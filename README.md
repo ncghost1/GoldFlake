@@ -2,6 +2,8 @@
 这是一个突发奇想出来的，非连续毫秒时间戳增量版本的雪花算法~<br>
 这是专门针对一个优先级不是很高的分布式 id 需求进行的改造：**增长的 ID 不能让竞争对手发现你每天的业务量**<br>
 这个需求对业务很重要的话，那么这个业务堪称“金子”，这是一个“金子”才适用的分布式 ID 生成算法，所以叫做 **GoldFlake**.<br>
+GoldFlake 请使用 runtime.GOMAXPROCS(2) 或调到2以上以发挥最好的性能。<br>
+GoldFlake 适用于 id 可被用户搜索的，你想要增加一些非连续性来使增长的 ID 不能让竞争对手发现你每天的业务量的场景。<br>
 其实我感觉没人会用这个玩意，看个乐子就好了🤣🤣<br>
 对于 GoldFlake，你可以有三种使用方法：<br>
 第一种是可以像雪花算法一样使用：
@@ -134,5 +136,7 @@ ok  	command-line-arguments	10.348s
 
 为什么Benchmark的结果显示使用了 IntervalRandProcess（上面列出的第二种方法）性能比不加偏移量（传统Snowflake）更高？我认为第一个也许只是测试结果的误差，实际上是差不多的。第二个，我认为理论上它确实能生成更多的id，首先 sleep 1ms 是不精确的，它们不能精确做到每 ms 执行一次获取随机毫秒偏移量并填充栈的函数(fillWithRandValStack)，这样可能会在每毫秒时间戳生成一些id后发生时间偏移。我们用的序列号是12位，每毫秒能生成4096个id，假如我们机器的性能能做到每毫秒能生成8000个id，那么在生成4095个id之后发生了时间偏移，强制跳到另一个毫秒时间戳（是逻辑上跳而不是实际时间发生跳跃），之后新的时间戳的序列号又从0开始生成，我们就可以在一个毫秒内将8000个id全部生成。<br>
 然后还需要解释一下，单核情况下的 BenchmarkGenerateIdWithIntervalRandProcess 测试得到 191 ns/op 是不稳定的，因为我们每次对 RandValStack 进行读写都有加互斥锁，单核运行两个 goroutine，那么在切换 goroutine 时可能会造成 fillWithRandValStack 函数只执行到了一半尚未释放锁，所以 GenerateId 因为获取不到锁，本次分配到的 goroutine 执行时间会被一直阻塞没有操作，如果运气差的话应该是会像单核情况下的 BenchmarkGenerateIdWithRandProcess 测试一样慢。所以只有在多核情况下，GoldFlake才能真正发挥作用，另外在机器性能高到每秒生成id数量超过序列号最大数量限制的情况下，理论上GoldFlake能够生成比SnowFlake更多的id。<br>
+（GOMAXPROCS设置为2或更高的前提下）IntervalRandProcess 方法对于生成 id 的性能较高，但是（非连续性）随机性较弱，因为我们是让 OS ”随缘“执行 IntervalRandProcess;而使用 RandProcess 方法对于生成 id 的性能相比 IntervalRandProcess 较低，但是随机性强。<br>
+要注意这两个方法都会有一种相同的损失，那就是可用id的数量，另外要注意一点本实现和网络上的雪花算法不一样，网络上只利用了41位毫秒时间戳，我们是使用uint64做id，可以利用42位，所以我们原本可用id的基础是可以用大约139年的，所以能够容忍一定损失。什么你跟我说unix时间戳用不了139年？不说139年，如果你的业务id真需要保持60年以上，你为什么不自己写一个新的时间戳啊？(╬▔皿▔)╯<br>
 具体原理可以查看我的个人网站文章：https://www.eririspace.cn/2022/05/12/GoldFlake/<br>
 虽然和文章的实现有些出入，但是原理是一样的。🍭🍭
