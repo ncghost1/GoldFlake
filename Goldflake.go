@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -25,6 +26,16 @@ const (
 	RandProcessSignalEnable = 1 << 0
 
 	RandProcessSignalDisable = 1 << 1
+
+	RandProcessOccupying = 1 << 2
+
+	GenerateProcessOccupying = 1 << 3
+
+	RandProcessOK = 0
+
+	RandProcessERR = -1
+
+	RandProcessNotReady = 1
 )
 
 type GoldFlake struct {
@@ -41,7 +52,6 @@ type RandValStack struct {
 	top     uint32
 	Size    uint32
 	flag    int8
-	lock    sync.Mutex
 }
 
 var RVStack RandValStack
@@ -68,8 +78,6 @@ func New(workerId uint32) (*GoldFlake, error) {
 // but we will use time.Sleep(), which is not an accurate method,
 // because it is affected by many factors such as OS and hardware.
 func initRandValStack(Size uint32, UseSignal int8) {
-	RVStack.lock.Lock()
-	defer RVStack.lock.Unlock()
 	RVStack.RandVal = make([]uint64, Size)
 	RVStack.top = 0
 	RVStack.Size = Size
@@ -79,6 +87,7 @@ func initRandValStack(Size uint32, UseSignal int8) {
 	} else {
 		RVStack.flag |= RandProcessSignalDisable
 	}
+	RVStack.flag |= GenerateProcessOccupying
 }
 
 // Push random value into the stack with probability.
@@ -86,36 +95,40 @@ func initRandValStack(Size uint32, UseSignal int8) {
 // The probability is chanceNumerator / chanceDenominator.
 // maxTimeOffset is the max millisecond time offset,
 // We randomly pick an uint64 value from 1 to max and push into the stack.
-func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error {
+func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint64) (int8, error) {
 	rand.Seed(time.Now().UnixNano())
-	RVStack.lock.Lock()
-	defer RVStack.lock.Unlock()
-	if RVStack.flag&RandProcessSignalEnable != 0 && RVStack.flag&RandProcessSignalDisable != 0 {
-		return errors.New("SignalEnable and SignalDisable are present at the same time")
-	}
-	if RVStack.flag&RandProcessSignalEnable != 0 || RVStack.flag&RandProcessSignalDisable != 0 {
-		if RVStack.top < RVStack.Size && rand.Uint64()%chanceDenominator < chanceNumerator {
-			offset := rand.Uint64()%maxTimeOffset + 1
-			RVStack.RandVal[RVStack.top] = offset
-			RVStack.top++
-			RVStack.flag &= ^RandProcessSignalEnable
-		} else {
-			RVStack.flag &= ^RandProcessSignalEnable
+	if RVStack.flag&GenerateProcessOccupying == 0 {
+		RVStack.flag |= RandProcessOccupying
+		if RVStack.flag&RandProcessSignalEnable != 0 && RVStack.flag&RandProcessSignalDisable != 0 {
+			return RandProcessERR, errors.New("SignalEnable and SignalDisable are present at the same time")
 		}
+		if RVStack.flag&RandProcessSignalEnable != 0 || RVStack.flag&RandProcessSignalDisable != 0 {
+			if RVStack.top < RVStack.Size && rand.Uint64()%chanceDenominator < chanceNumerator {
+				offset := rand.Uint64()%maxTimeOffset + 1
+				atomic.StoreUint64(&RVStack.RandVal[RVStack.top], offset)
+				atomic.AddUint32(&RVStack.top, 1)
+				RVStack.flag &= ^RandProcessSignalEnable
+			} else {
+				RVStack.flag &= ^RandProcessSignalEnable
+			}
+			RVStack.flag &= ^RandProcessOccupying
+		}
+	} else {
+		return RandProcessNotReady, nil
 	}
-	return nil
+	return RandProcessOK, nil
 }
 
 // Generate and return an UUID
 func (gf *GoldFlake) Generate() (uint64, error) {
 	gf.lock.Lock()
 	defer gf.lock.Unlock()
-	RVStack.lock.Lock()
-	if RVStack.top > 0 {
+	RVStack.flag |= GenerateProcessOccupying
+	if RVStack.flag&RandProcessOccupying == 0 && atomic.LoadUint32(&RVStack.top) > 0 {
 		gf.timeOffset += RVStack.RandVal[RVStack.top-1]
 		RVStack.top--
 	}
-	RVStack.lock.Unlock()
+	RVStack.flag &= ^GenerateProcessOccupying
 	ts := timestamp() + gf.timeOffset
 	if ts == gf.lastTimestamp {
 		gf.sequence = (gf.sequence + 1) & MaxSequence
@@ -168,6 +181,7 @@ func InitGfNode(workerid uint32) (*GoldFlake, error) {
 }
 
 // InitRandProcess
+// (Since we deleted mutex from RandValStack, this is not recommended.)
 // "Size" is the RandValStack's Size,
 // when "UseSignal" is 1, We will use the method of setting the signal bit
 // of the flag to notify RandProcess to execute.
@@ -190,14 +204,9 @@ func InitRandProcess(Size uint32, UseSignal int8) {
 //			}
 //		}
 //	}
-func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error {
-	for {
-		err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
+func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) (int8, error) {
+	status, err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	return status, err
 }
 
 // IntervalRandProcess
@@ -215,13 +224,14 @@ func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) error
 //			}
 //		}
 //	}
-func IntervalRandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64, Interval time.Duration) error {
-	err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+func IntervalRandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64, Interval time.Duration) (int8, error) {
+	status, err := fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset)
+	// If we have error,we need to return ASAP
 	if err != nil {
-		return err
+		return status, err
 	}
 	time.Sleep(Interval)
-	return nil
+	return status, err
 }
 
 // Generate an UUID.

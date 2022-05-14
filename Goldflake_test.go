@@ -11,21 +11,28 @@ func TestNormalGenerateId(t *testing.T) {
 	var workerid uint32
 	Gf, err := InitGfNode(workerid)
 	count := 0
+	done := make(chan bool)
 	if err != nil {
 		t.Errorf("Init GoldFlake node error:%s", err)
 		return
 	}
 	go func() {
 		for {
-			_, err := Gf.Generate()
-			if err != nil {
-				t.Errorf("Generate id error:%s", err)
+			select {
+			case <-done:
 				return
+			default:
+				_, err := Gf.Generate()
+				if err != nil {
+					t.Errorf("Generate id error:%s", err)
+					return
+				}
+				count++
 			}
-			count++
 		}
 	}()
 	time.Sleep(time.Second)
+	close(done)
 	fmt.Println("TestNormalGenerateId: Number of generated ID:", count)
 }
 
@@ -39,6 +46,7 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	count := 0
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerId)
+	done := make(chan bool)
 	if err != nil {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -46,24 +54,39 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	InitRandProcess(stackSize, useSignal)
 	go func() {
 		for {
-			err = IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
-			if err != nil {
-				t.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
+				if err != nil {
+					t.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
+				Randcnt++
 			}
-			Randcnt++
+
 		}
 	}()
 	go func() {
 		for {
-			_, err := GenerateId(Gf)
-			if err != nil {
-				t.Errorf("GenerateId error:%s", err)
+			select {
+			case <-done:
 				return
+			default:
+				_, err := GenerateId(Gf)
+				if err != nil {
+					t.Errorf("GenerateId error:%s", err)
+					return
+				}
+				count++
 			}
-			count++
 		}
 	}()
 	time.Sleep(time.Second)
+	close(done)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess: Number of generated ID:", count)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess: IntervalRandProcess Execution Count:", Randcnt)
 }
@@ -78,6 +101,7 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	count := 0
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerId)
+	done := make(chan bool)
 	if err != nil {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -85,24 +109,38 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	InitRandProcess(stackSize, useSignal)
 	go func() {
 		for {
-			err = IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
-			if err != nil {
-				t.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
+				if err != nil {
+					t.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
+				Randcnt++
 			}
-			Randcnt++
 		}
 	}()
 	go func() {
 		for {
-			_, err := GenerateId(Gf)
-			if err != nil {
-				t.Errorf("GenerateId error:%s", err)
+			select {
+			case <-done:
 				return
+			default:
+				_, err := GenerateId(Gf)
+				if err != nil {
+					t.Errorf("GenerateId error:%s", err)
+					return
+				}
+				count++
 			}
-			count++
 		}
 	}()
 	time.Sleep(time.Second)
+	close(done)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess_2: Number of generated ID:", count)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess_2: IntervalRandProcess Execution Count:", Randcnt)
 }
@@ -116,6 +154,7 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 	count := 0
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerId)
+	done := make(chan bool)
 	if err != nil {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -123,23 +162,37 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 	InitRandProcess(stackSize, useSignal)
 	go func() {
 		for {
-			err = RandProcess(1, 2, maxTimeOffset)
-			if err != nil {
-				t.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := RandProcess(1, 2, maxTimeOffset)
+				if err != nil {
+					t.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
 			}
 		}
 	}()
 	go func() {
 		for {
-			_, err := GenerateId(Gf)
-			if err != nil {
-				t.Errorf("GenerateId error:%s", err)
+			select {
+			case <-done:
 				return
+			default:
+				_, err := GenerateId(Gf)
+				if err != nil {
+					t.Errorf("GenerateId error:%s", err)
+					return
+				}
+				count++
 			}
-			count++
 		}
 	}()
 	time.Sleep(time.Second)
+	close(done)
 	fmt.Println("TestGenerateIdWithRandProcess: Number of generated ID:", count)
 }
 
@@ -154,6 +207,7 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 	count := 0
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerId)
+	done := make(chan bool)
 	if err != nil {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -161,22 +215,36 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 	InitRandProcess(stackSize, useSignal)
 	go func() {
 		for {
-			err = RandProcess(1, 2, maxTimeOffset)
-			if err != nil {
-				t.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := RandProcess(1, 2, maxTimeOffset)
+				if err != nil {
+					t.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
 			}
 		}
 	}()
 	go func() {
 		for {
-			_, err := GenerateId(Gf)
-			if err != nil {
-				t.Errorf("GenerateId error:%s", err)
+			select {
+			case <-done:
 				return
+			default:
+				_, err := GenerateId(Gf)
+				if err != nil {
+					t.Errorf("GenerateId error:%s", err)
+					return
+				}
+				count++
 			}
-			count++
 		}
 	}()
 	time.Sleep(time.Second)
+	close(done)
 	fmt.Println("TestGenerateIdWithRandProcess_2: Number of generated ID:", count)
 }

@@ -31,6 +31,7 @@ func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 	coreNum := 1
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerid)
+	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -39,19 +40,33 @@ func BenchmarkGenerateIdWithIntervalRandProcess(b *testing.B) {
 	b.ResetTimer()
 	go func() {
 		for {
-			err = IntervalRandProcess(1, 2, maxtimeoffset, time.Millisecond)
-			if err != nil {
-				b.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := IntervalRandProcess(1, 2, maxtimeoffset, time.Millisecond)
+				if err != nil {
+					b.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
 			}
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-		_, err := GenerateId(Gf)
-		if err != nil {
-			b.Errorf("GenerateId error:%s", err)
+		select {
+		case <-done:
 			return
+		default:
+			_, err := GenerateId(Gf)
+			if err != nil {
+				b.Errorf("GenerateId error:%s", err)
+				return
+			}
 		}
 	}
+	close(done)
 }
 
 func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
@@ -62,6 +77,7 @@ func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
 	coreNum := 2
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerid)
+	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -70,19 +86,33 @@ func BenchmarkGenerateIdWithIntervalRandProcess_2(b *testing.B) {
 	b.ResetTimer()
 	go func() {
 		for {
-			err = IntervalRandProcess(1, 2, maxtimeoffset, time.Millisecond)
-			if err != nil {
-				b.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := IntervalRandProcess(1, 2, maxtimeoffset, time.Millisecond)
+				if err != nil {
+					b.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
 			}
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-		_, err := GenerateId(Gf)
-		if err != nil {
-			b.Errorf("GenerateId error:%s", err)
+		select {
+		case <-done:
 			return
+		default:
+			_, err := GenerateId(Gf)
+			if err != nil {
+				b.Errorf("GenerateId error:%s", err)
+				return
+			}
 		}
 	}
+	close(done)
 }
 
 func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
@@ -93,6 +123,7 @@ func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
 	coreNum := 1
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerid)
+	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -101,19 +132,33 @@ func BenchmarkGenerateIdWithRandProcess(b *testing.B) {
 	b.ResetTimer()
 	go func() {
 		for {
-			err = RandProcess(1, 2, maxtimeoffset)
-			if err != nil {
-				b.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := RandProcess(1, 2, maxtimeoffset)
+				if err != nil {
+					b.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
 			}
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-		_, err := GenerateId(Gf)
-		if err != nil {
-			b.Errorf("GenerateId error:%s", err)
+		select {
+		case <-done:
 			return
+		default:
+			_, err := GenerateId(Gf)
+			if err != nil {
+				b.Errorf("GenerateId error:%s", err)
+				return
+			}
 		}
 	}
+	close(done)
 }
 
 func BenchmarkGenerateIdWithRandProcess_2(b *testing.B) {
@@ -124,6 +169,7 @@ func BenchmarkGenerateIdWithRandProcess_2(b *testing.B) {
 	coreNum := 2
 	runtime.GOMAXPROCS(coreNum)
 	Gf, err := New(workerid)
+	done := make(chan bool)
 	if err != nil {
 		b.Errorf("Create Goldflake node error:%s", err)
 		return
@@ -132,17 +178,31 @@ func BenchmarkGenerateIdWithRandProcess_2(b *testing.B) {
 	b.ResetTimer()
 	go func() {
 		for {
-			err = RandProcess(1, 2, maxtimeoffset)
-			if err != nil {
-				b.Errorf("RandProcess error:%s", err)
+			select {
+			case <-done:
+				return
+			default:
+				status, err := RandProcess(1, 2, maxtimeoffset)
+				if err != nil {
+					b.Errorf("RandProcess error:%s", err)
+				}
+				if status == RandProcessNotReady {
+					runtime.Gosched()
+				}
 			}
 		}
 	}()
 	for i := 0; i < b.N; i++ {
-		_, err := GenerateId(Gf)
-		if err != nil {
-			b.Errorf("GenerateId error:%s", err)
+		select {
+		case <-done:
 			return
+		default:
+			_, err := GenerateId(Gf)
+			if err != nil {
+				b.Errorf("GenerateId error:%s", err)
+				return
+			}
 		}
 	}
+	close(done)
 }
