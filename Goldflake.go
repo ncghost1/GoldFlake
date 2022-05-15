@@ -23,6 +23,8 @@ const (
 
 	MaxSequence = -1 ^ (-1 << numSequenceBits)
 
+	MaxSize = -1 ^ (-1 << 32)
+
 	RandProcessSignalEnable = 1 << 0
 
 	RandProcessSignalDisable = 1 << 1
@@ -79,17 +81,24 @@ func newNode(workerId uint32) (*GoldFlake, error) {
 // It means that we will not use flag to notify whether a new millisecond has arrived,
 // but we will use time.Sleep(), which is not an accurate method,
 // because it is affected by many factors such as OS and hardware.
-func initRandValStack(Size uint32, Mode int8) {
+// Or we will use SyncGenerateAndRand,It is a function that will call fillWithRandValStack in generating id.
+func initRandValStack(Size uint32, Mode int8) error {
 	RVStack.RandVal = make([]uint64, Size)
 	RVStack.top = 0
+	if Size < 0 || Size > MaxSize {
+		return errors.New("invalid Size")
+	}
 	RVStack.Size = Size
 	RVStack.flag = 0
 	if Mode == RandProcessSignalEnable {
 		RVStack.flag |= RandProcessSignalEnable
-	} else {
+	} else if Mode == RandProcessSignalDisable || Mode == RandProcessSync {
 		RVStack.flag |= RandProcessSignalDisable
+	} else {
+		return errors.New("invalid Mode")
 	}
 	RVStack.flag |= GenerateProcessOccupying
+	return nil
 }
 
 // Push random value into the stack with probability.
@@ -224,8 +233,9 @@ func InitGfNode(workerid uint32) (*GoldFlake, error) {
 // when "UseSignal" is RandProcessSignalDisEnable, We don't use flags to notify if the RandProcess need to execute,
 // in this case we use IntervalRandProcess, which will use the Sleep function to run the RandProcess in intervals.
 // Or we use SyncGenerateAndRand,It is a function that will call fillWithRandValStack in generating id.
-func InitRandProcess(Size uint32, Mode int8) {
-	initRandValStack(Size, Mode)
+func InitRandProcess(Size uint32, Mode int8) error {
+	err := initRandValStack(Size, Mode)
+	return err
 }
 
 // RandProcess

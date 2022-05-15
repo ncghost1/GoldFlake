@@ -40,7 +40,7 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
-	var useSignal int8 = RandProcessSignalDisable
+	var mode int8 = RandProcessSignalDisable
 	coreNum := 1
 	Randcnt := 0
 	count := 0
@@ -51,7 +51,10 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
 	}
-	InitRandProcess(stackSize, useSignal)
+	err = InitRandProcess(stackSize, mode)
+	if err != nil {
+		t.Errorf("initialize RandValStack error:%s", err)
+	}
 	go func() {
 		for {
 			select {
@@ -95,7 +98,7 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
-	var useSignal int8 = RandProcessSignalDisable
+	var mode int8 = RandProcessSignalDisable
 	coreNum := 2
 	Randcnt := 0
 	count := 0
@@ -106,7 +109,10 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
 	}
-	InitRandProcess(stackSize, useSignal)
+	err = InitRandProcess(stackSize, mode)
+	if err != nil {
+		t.Errorf("initialize RandValStack error:%s", err)
+	}
 	go func() {
 		for {
 			select {
@@ -149,7 +155,7 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
-	var useSignal int8 = RandProcessSignalEnable
+	var mode int8 = RandProcessSignalEnable
 	coreNum := 1
 	count := 0
 	runtime.GOMAXPROCS(coreNum)
@@ -159,7 +165,10 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
 	}
-	InitRandProcess(stackSize, useSignal)
+	err = InitRandProcess(stackSize, mode)
+	if err != nil {
+		t.Errorf("initialize RandValStack error:%s", err)
+	}
 	go func() {
 		for {
 			select {
@@ -202,7 +211,7 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
-	var useSignal int8 = RandProcessSignalEnable
+	var mode int8 = RandProcessSignalEnable
 	coreNum := 2
 	count := 0
 	runtime.GOMAXPROCS(coreNum)
@@ -212,7 +221,10 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 		t.Errorf("Create Goldflake node error:%s", err)
 		return
 	}
-	InitRandProcess(stackSize, useSignal)
+	err = InitRandProcess(stackSize, mode)
+	if err != nil {
+		t.Errorf("initialize RandValStack error:%s", err)
+	}
 	go func() {
 		for {
 			select {
@@ -253,7 +265,7 @@ func TestSyncGenerateAndRand(t *testing.T) {
 	var workerid uint32
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
-	var useSignal int8 = RandProcessSync
+	var mode int8 = RandProcessSync
 	Gf, err := InitGfNode(workerid)
 	coreNum := 1
 	count := 0
@@ -263,7 +275,10 @@ func TestSyncGenerateAndRand(t *testing.T) {
 		t.Errorf("Init GoldFlake node error:%s", err)
 		return
 	}
-	InitRandProcess(stackSize, useSignal)
+	err = InitRandProcess(stackSize, mode)
+	if err != nil {
+		t.Errorf("initialize RandValStack error:%s", err)
+	}
 	go func() {
 		for {
 			select {
@@ -290,7 +305,7 @@ func TestSyncGenerateAndRand_2(t *testing.T) {
 	var workerid uint32
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
-	var useSignal int8 = RandProcessSync
+	var mode int8 = RandProcessSync
 	Gf, err := InitGfNode(workerid)
 	coreNum := 2
 	count := 0
@@ -300,7 +315,10 @@ func TestSyncGenerateAndRand_2(t *testing.T) {
 		t.Errorf("Init GoldFlake node error:%s", err)
 		return
 	}
-	InitRandProcess(stackSize, useSignal)
+	err = InitRandProcess(stackSize, mode)
+	if err != nil {
+		t.Errorf("initialize RandValStack error:%s", err)
+	}
 	go func() {
 		for {
 			select {
