@@ -218,14 +218,14 @@ func InitGfNode(workerid uint32) (*GoldFlake, error) {
 }
 
 // InitRandProcess
-// (Since we deleted mutex from RandValStack, this is not recommended.)
 // "Size" is the RandValStack's Size,
-// when "UseSignal" is 1, We will use the method of setting the signal bit
+// when "UseSignal" is RandProcessSignalEnable, We will use the method of setting the signal bit
 // of the flag to notify RandProcess to execute.
-// when "UseSignal" is 0, We don't use flags to notify if the RandProcess need to execute,
+// when "UseSignal" is RandProcessSignalDisEnable, We don't use flags to notify if the RandProcess need to execute,
 // in this case we use IntervalRandProcess, which will use the Sleep function to run the RandProcess in intervals.
-func InitRandProcess(Size uint32, UseSignal int8) {
-	initRandValStack(Size, UseSignal)
+// Or we use SyncGenerateAndRand,It is a function that will call fillWithRandValStack in generating id.
+func InitRandProcess(Size uint32, Mode int8) {
+	initRandValStack(Size, Mode)
 }
 
 // RandProcess
