@@ -7,7 +7,6 @@ import (
 	"errors"
 	"math/rand"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -56,6 +55,7 @@ type RandValStack struct {
 	top     uint32
 	Size    uint32
 	flag    int8
+	lock    sync.Mutex
 }
 
 var RVStack RandValStack
@@ -110,20 +110,22 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 	rand.Seed(time.Now().UnixNano())
 	if RVStack.flag&GenerateProcessOccupying == 0 {
 		RVStack.flag |= RandProcessOccupying
+		RVStack.lock.Lock()
 		if RVStack.flag&RandProcessSignalEnable != 0 && RVStack.flag&RandProcessSignalDisable != 0 {
 			return RandProcessERR, errors.New("SignalEnable and SignalDisable are present at the same time")
 		}
 		if RVStack.flag&RandProcessSignalEnable != 0 || RVStack.flag&RandProcessSignalDisable != 0 {
 			if RVStack.top < RVStack.Size && rand.Uint64()%chanceDenominator < chanceNumerator {
 				offset := rand.Uint64()%maxTimeOffset + 1
-				atomic.StoreUint64(&RVStack.randVal[RVStack.top], offset)
-				atomic.AddUint32(&RVStack.top, 1)
+				RVStack.randVal[RVStack.top] = offset
+				RVStack.top++
 				RVStack.flag &= ^RandProcessSignalEnable
 			} else {
 				RVStack.flag &= ^RandProcessSignalEnable
 			}
 			RVStack.flag &= ^RandProcessOccupying
 		}
+		RVStack.lock.Unlock()
 	} else {
 		return RandProcessNotReady, nil
 	}
@@ -131,14 +133,17 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 }
 
 // Generate and return an UUID
-// Do not use this with SyncGenerateAndRand together.
 func (gf *GoldFlake) Generate() (uint64, error) {
 	gf.lock.Lock()
 	defer gf.lock.Unlock()
-	RVStack.flag |= GenerateProcessOccupying
-	if RVStack.flag&RandProcessOccupying == 0 && atomic.LoadUint32(&RVStack.top) > 0 {
-		gf.timeOffset += RVStack.randVal[RVStack.top-1]
-		RVStack.top--
+	if RVStack.flag&RandProcessOccupying == 0 {
+		RVStack.flag |= GenerateProcessOccupying
+		RVStack.lock.Lock()
+		if RVStack.top > 0 {
+			RVStack.top--
+			gf.timeOffset += RVStack.randVal[RVStack.top]
+		}
+		RVStack.lock.Unlock()
 	}
 	RVStack.flag &= ^GenerateProcessOccupying
 	ts := timestamp() + gf.timeOffset
@@ -165,15 +170,18 @@ func (gf *GoldFlake) Generate() (uint64, error) {
 }
 
 // When we generate ID, fillwithrandvalstack is executed synchronously every new millisecond timestamp.
-// Use InitRandProcess before using SyncGenerateAndRand,make user
-// Do not use this with Generate together.
+// Use InitRandProcess before using SyncGenerateAndRand,and ensure the 'mode' parameter is RandProcessSync.
 func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, maxTimeOffset uint64) (uint64, error) {
 	gf.lock.Lock()
 	defer gf.lock.Unlock()
-	RVStack.flag |= GenerateProcessOccupying
-	if RVStack.flag&RandProcessOccupying == 0 && atomic.LoadUint32(&RVStack.top) > 0 {
-		gf.timeOffset += RVStack.randVal[RVStack.top-1]
-		RVStack.top--
+	if RVStack.flag&RandProcessOccupying == 0 {
+		RVStack.flag |= GenerateProcessOccupying
+		RVStack.lock.Lock()
+		if RVStack.top > 0 {
+			RVStack.top--
+			gf.timeOffset += RVStack.randVal[RVStack.top]
+		}
+		RVStack.lock.Unlock()
 	}
 	RVStack.flag &= ^GenerateProcessOccupying
 	ts := timestamp() + gf.timeOffset

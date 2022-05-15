@@ -1,14 +1,11 @@
 # GoldFlake
-在终端输入以下命令载入GoldFlake：
+在终端输入以下命令导入GoldFlake：
 ```
 go get github.com/ncghost1/GoldFlake
 ```
 这是一个突发奇想出来的，非连续毫秒时间戳增量版本的雪花算法~<br>
 这是专门针对一个优先级不是很高的分布式 id 需求进行的改造：**增长的 ID 不能让竞争对手发现你每天的业务量**<br>
 这个需求对业务很重要的话，那么这个业务堪称“金子”，这是一个“金子”才适用的分布式 ID 生成算法，所以叫做 **GoldFlake**.<br>
-2022/5/14:已将 mutex 从 RandValStack 中移除，改成无锁方式解决 RandValStack 的多线程冲突，在单核情况下
-按照示例使用 Gosched() 在 RandProcess/IntervalRandProcess 无法读写 RandValStack 时将 CPU 时间片分给其他线程，
-即不会造成生成 id 线程阻塞。🍭🍭<br>
 GoldFlake 适用于 id 可被用户搜索的，你想要增加一些非连续性来使增长的 ID 不能让竞争对手发现你每天的业务量的场景。<br>
 其实我感觉没人会用这个玩意，看个乐子就好了🤣🤣<br>
 对于 GoldFlake，你可以有四种使用方法：<br>
@@ -157,43 +154,32 @@ func main() {
 }
 ```
 GoldFlake Benchmark 测试：<br>
-数据相近的结果均在误差范围之内，不能从相近的数据确定哪个方法更快，而只能考虑是性能接近。实际上除了 3924 ns/op 以外，其它的方法都很接近。<br>
+数据相近的结果均在误差范围之内，不能从相近的数据确定哪个方法更快，而只能考虑是性能接近。实际上除了单核使用 RandProcess 的 4047 ns/op 以外，其它的方法都很接近。<br>
 linux(Ubuntu20.04):
 ```
 goos: linux
 goarch: amd64
-BenchmarkNormalGenerateId-2                      	 4923379	       244 ns/op
-BenchmarkGenerateIdWithIntervalRandProcess-2     	 8013470	       170 ns/op
+BenchmarkNormalGenerateId-2                      	 4902864	       244 ns/op
+BenchmarkGenerateIdWithIntervalRandProcess-2     	 8060004	       161 ns/op
 testing: BenchmarkGenerateIdWithIntervalRandProcess-2 left GOMAXPROCS set to 1
-BenchmarkGenerateIdWithIntervalRandProcess_2-2   	 8144731	       154 ns/op
-BenchmarkGenerateIdWithRandProcess-2             	  344252	      3924 ns/op
+BenchmarkGenerateIdWithIntervalRandProcess_2-2   	 7229703	       168 ns/op
+BenchmarkGenerateIdWithRandProcess-2             	  338768	      4047 ns/op
 testing: BenchmarkGenerateIdWithRandProcess-2 left GOMAXPROCS set to 1
-BenchmarkGenerateIdWithRandProcess_2-2           	 6750685	       154 ns/op
-BenchmarkSyncGenerateAndRand-2                   	 8289258	       206 ns/op
+BenchmarkGenerateIdWithRandProcess_2-2           	 6711577	       156 ns/op
+BenchmarkSyncGenerateAndRand-2                   	 5840563	       192 ns/op
 testing: BenchmarkSyncGenerateAndRand-2 left GOMAXPROCS set to 1
-BenchmarkSyncGenerateAndRand_2-2                 	 5737431	       249 ns/op
+BenchmarkSyncGenerateAndRand_2-2                 	 7214250	       178 ns/op
 PASS
-ok  	_/root/Gold	18.443s
+ok  	_/root/Gold	16.724s
 ```
-~~为什么Benchmark的结果显示使用了 IntervalRandProcess（上面列出的第二种方法）性能比不加偏移量（传统Snowflake）更高？
-我认为第一个也许只是测试结果的误差，实际上是差不多的。第二个，我认为理论上它确实能生成更多的id，首先 sleep 1ms 是不精确的，
-它们不能精确做到每 ms 执行一次获取随机毫秒偏移量并填充栈的函数(fillWithRandValStack)，这样可能会在每毫秒时间戳生成一些id后发生时间偏移。
-我们用的序列号是12位，每毫秒能生成 4096 个id，假如我们机器的性能能做到每毫秒能生成8000个id，那么在生成4095个id之后发生了时间偏移，
-强制跳到另一个毫秒时间戳（是逻辑上跳而不是实际时间发生跳跃），之后新的时间戳的序列号又从0开始生成，我们就可以在一个毫秒内将8000个id全部生成。<br>
-然后还需要解释一下，单核情况下的 BenchmarkGenerateIdWithIntervalRandProcess 测试得到 191 ns/op 是不稳定的，
-因为我们每次对 RandValStack 进行读写都有加互斥锁，单核运行两个 goroutine
-，那么在切换 goroutine 时可能会造成 fillWithRandValStack 函数只执行到了一半尚未释放锁，
-所以 GenerateId 因为获取不到锁，本次分配到的 goroutine 执行时间会被一直阻塞没有操作，
-如果运气差的话应该是会像单核情况下的 BenchmarkGenerateIdWithRandProcess 测试一样慢。
-所以只有在多核情况下，GoldFlake才能真正发挥作用，另外在机器性能高到每秒生成id数量超过序列号最大数量限制的情况下，
-理论上 GoldFlake 能够生成比 SnowFlake 更多的id。~~<br>
-2022/5/14:<br>
-目前已经移除了 RandValStack 中的 mutex，使用的是无锁方式解决多线程冲突，原本使用 mutex 在单线程时若 RandProcess/IntervalRandProcess
+2022/5/15:<br>
+~~目前已经移除了 RandValStack 中的 mutex，使用的是无锁方式解决多线程冲突~~。已经重新将 mutex 加回 RandValStack（果然无锁还是不好保证线程安全），
+原本使用 mutex 在单线程时若 RandProcess/IntervalRandProcess
 未释放锁时切换了 goroutine，会导致生成 id 线程因获取不到锁而阻塞。现在的做法是在 RandValStack 中的 flag 增加了两个标志位，一个用来标志
 RandValStack 被 GenerateId 所读写，另一个用来标志 RandValStack 被 RandProcess/IntervalRandProcess 所读写。<br>
 除此之外还增加了一个新的函数：SyncGenerateAndRand，同步生成id和生成随机时间偏移量。该函数实现方法与 RandProcess 方案很像，
 均是在生成id时来到了新的毫秒时间则调用一次随机获取时间偏移量函数，但是 RandProcess 给的方案是异步的，而这个 SyncGenerateAndRand 是同步的。
-理论上它会比异步方案随机性更强，但注意使用该函数生成id时，请勿同时多线程使用 Generate 函数生成id，否则可能会导致线程冲突。<br>
+理论上它会比异步方案随机性更强。~~但注意使用该函数生成id时，请勿同时多线程使用 Generate 函数生成id，否则可能会导致线程冲突。~~（加回mutex已保证线程安全）<br>
 在 RandValStack 被 RandProcess/IntervalRandProcess 所读写时，我们让 GenerateId 继续生成 id，但不进行偏移，
 从而不会因为无法读写 RandValStack 而造成阻塞。<br>
 在 RandValStack 被 GenerateId 所读写时，我们会返回状态码 RandProcessNotReady(宏，实际值为1) 表示 RandProcess/IntervalRandProcess 目前无法执行，
