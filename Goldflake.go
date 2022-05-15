@@ -52,7 +52,7 @@ type GoldFlake struct {
 
 // Random Value(TimeOffset) Stack
 type RandValStack struct {
-	RandVal []uint64 // We use slice to simulate stack space
+	randVal []uint64 // We use slice to simulate stack space
 	top     uint32
 	Size    uint32
 	flag    int8
@@ -83,7 +83,7 @@ func newNode(workerId uint32) (*GoldFlake, error) {
 // because it is affected by many factors such as OS and hardware.
 // Or we will use SyncGenerateAndRand,It is a function that will call fillWithRandValStack in generating id.
 func initRandValStack(Size uint32, Mode int8) error {
-	RVStack.RandVal = make([]uint64, Size)
+	RVStack.randVal = make([]uint64, Size)
 	RVStack.top = 0
 	if Size < 0 || Size > MaxSize {
 		return errors.New("invalid Size")
@@ -116,7 +116,7 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 		if RVStack.flag&RandProcessSignalEnable != 0 || RVStack.flag&RandProcessSignalDisable != 0 {
 			if RVStack.top < RVStack.Size && rand.Uint64()%chanceDenominator < chanceNumerator {
 				offset := rand.Uint64()%maxTimeOffset + 1
-				atomic.StoreUint64(&RVStack.RandVal[RVStack.top], offset)
+				atomic.StoreUint64(&RVStack.randVal[RVStack.top], offset)
 				atomic.AddUint32(&RVStack.top, 1)
 				RVStack.flag &= ^RandProcessSignalEnable
 			} else {
@@ -137,7 +137,7 @@ func (gf *GoldFlake) Generate() (uint64, error) {
 	defer gf.lock.Unlock()
 	RVStack.flag |= GenerateProcessOccupying
 	if RVStack.flag&RandProcessOccupying == 0 && atomic.LoadUint32(&RVStack.top) > 0 {
-		gf.timeOffset += RVStack.RandVal[RVStack.top-1]
+		gf.timeOffset += RVStack.randVal[RVStack.top-1]
 		RVStack.top--
 	}
 	RVStack.flag &= ^GenerateProcessOccupying
@@ -172,7 +172,7 @@ func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, max
 	defer gf.lock.Unlock()
 	RVStack.flag |= GenerateProcessOccupying
 	if RVStack.flag&RandProcessOccupying == 0 && atomic.LoadUint32(&RVStack.top) > 0 {
-		gf.timeOffset += RVStack.RandVal[RVStack.top-1]
+		gf.timeOffset += RVStack.randVal[RVStack.top-1]
 		RVStack.top--
 	}
 	RVStack.flag &= ^GenerateProcessOccupying
