@@ -145,7 +145,7 @@ func main() {
 		return
 	}
 	InitRandProcess(stackSize, Signal)
-    uid, err := Gf.SyncGenerateAndRand(chanceNumerator, chanceDenominator, maxTimeOffset)
+    	uid, err := Gf.SyncGenerateAndRand(chanceNumerator, chanceDenominator, maxTimeOffset)
 	if err != nil {
 		fmt.Println(err)
 		return
