@@ -64,8 +64,8 @@ func (gf *GoldFlake) pack() uint64 {
 	return uuid
 }
 
-// Create and init a GoldFlake node
-func New(workerId uint32) (*GoldFlake, error) {
+// Create and Initialize a GoldFlake node
+func newNode(workerId uint32) (*GoldFlake, error) {
 	if workerId < 0 || workerId > MaxWorkId {
 		return nil, errors.New("invalid worker Id")
 	}
@@ -208,9 +208,9 @@ func timestamp() uint64 {
 //        GoldFlake API
 // *****************************
 
-// Initialize a GoldFlake node
+// Create and Initialize a GoldFlake node
 func InitGfNode(workerid uint32) (*GoldFlake, error) {
-	GfNode, err := New(workerid)
+	GfNode, err := newNode(workerid)
 	if err != nil {
 		return nil, err
 	}
