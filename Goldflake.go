@@ -150,7 +150,7 @@ func (gf *GoldFlake) Generate() (uint64, error) {
 	if ts == gf.lastTimestamp {
 		gf.sequence = (gf.sequence + 1) & MaxSequence
 		if gf.sequence == 0 {
-			ts = gf.waitNextMilli(ts) + gf.timeOffset
+			ts = gf.waitNextMilli(ts)
 		}
 	} else {
 		// It's a new millisecond.
@@ -188,7 +188,7 @@ func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, max
 	if ts == gf.lastTimestamp {
 		gf.sequence = (gf.sequence + 1) & MaxSequence
 		if gf.sequence == 0 {
-			ts = gf.waitNextMilli(ts) + gf.timeOffset
+			ts = gf.waitNextMilli(ts)
 		}
 	} else {
 		// It's a new millisecond.
@@ -209,7 +209,7 @@ func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, max
 func (gf *GoldFlake) waitNextMilli(ts uint64) uint64 {
 	for ts == gf.lastTimestamp {
 		time.Sleep(100 * time.Microsecond)
-		ts = timestamp()
+		ts = timestamp() + gf.timeOffset
 	}
 	return ts
 }
