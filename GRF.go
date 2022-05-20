@@ -373,6 +373,8 @@ func GRFGetTimeOffset(workerId uint32) uint64 {
 	timeoffset := readTimeOffsetFromGRF(workerId)
 	if GrfStrategy == TSync {
 		timeoffset += tSyncThreshold
+	} else if GrfStrategy != FSync {
+		panic("GRF error: unknown 'strategy'")
 	}
 	return timeoffset
 }
@@ -381,8 +383,10 @@ func GRFUpdateTimeOffset(workerId uint32, timeOffset uint64) {
 	if GrfStrategy == TSync && GrfLastupdatedtimeoffset[workerId]+tSyncThreshold <= timeOffset {
 		GrfLastupdatedtimeoffset[workerId] = timeOffset
 		writeTimeOffsetInGRF(workerId, timeOffset)
-	} else {
+	} else if GrfStrategy == FSync {
 		writeTimeOffsetInGRF(workerId, timeOffset)
+	} else {
+		panic("GRF error: unknown 'strategy'")
 	}
 }
 
