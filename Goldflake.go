@@ -76,6 +76,9 @@ func newNode(workerId uint32) (*GoldFlake, error) {
 	var timeOffset uint64 = 0
 	if GrfEnable == GRFEnable {
 		timeOffset = GRFGetTimeOffset(workerId)
+		if GrfStrategy == TSync {
+			ResetGrfLastupdatedtimeoffset(workerId)
+		}
 	}
 	return &GoldFlake{workerId: workerId, timeOffset: timeOffset}, nil
 }

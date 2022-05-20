@@ -156,6 +156,7 @@ func TestGRFSetStrategytSync(t *testing.T) {
 
 func TestGRFUpdateTimeOffsetWithFormatALL(t *testing.T) {
 	err := GRFSetFormat(FormatALL)
+	GRFSetStrategy(FSync)
 	if err != nil {
 		t.Errorf("error:%v", err)
 	}
@@ -163,9 +164,9 @@ func TestGRFUpdateTimeOffsetWithFormatALL(t *testing.T) {
 	GRFUpdateTimeOffset(2, 2)
 	GRFUpdateTimeOffset(3, 3)
 	GRFUpdateTimeOffset(1, 5)
-	w1_Offset := GRFGetTimeOffset(1) - tSyncThreshold
-	w2_Offset := GRFGetTimeOffset(2) - tSyncThreshold
-	w3_Offset := GRFGetTimeOffset(3) - tSyncThreshold
+	w1_Offset := GRFGetTimeOffset(1)
+	w2_Offset := GRFGetTimeOffset(2)
+	w3_Offset := GRFGetTimeOffset(3)
 	ASSERT_EQUAL(t, w1_Offset, uint64(5))
 	ASSERT_EQUAL(t, w2_Offset, uint64(2))
 	ASSERT_EQUAL(t, w3_Offset, uint64(3))
@@ -180,7 +181,7 @@ func TestGRFUpdateTimeOffsetWithFormatMAX(t *testing.T) {
 	GRFUpdateTimeOffset(2, 2)
 	GRFUpdateTimeOffset(3, 10)
 	GRFUpdateTimeOffset(1, 5)
-	w1_Offset := GRFGetTimeOffset(1) - tSyncThreshold
+	w1_Offset := GRFGetTimeOffset(1)
 	ASSERT_EQUAL(t, w1_Offset, uint64(10))
 }
 
@@ -206,9 +207,9 @@ func TestGRFRecoveryWithFormatALL(t *testing.T) {
 	if err != nil {
 		t.Errorf("error:%v", err)
 	}
-	ASSERT_EQUAL(t, gf1.timeOffset, uint64(5)+tSyncThreshold)
-	ASSERT_EQUAL(t, gf2.timeOffset, uint64(2)+tSyncThreshold)
-	ASSERT_EQUAL(t, gf3.timeOffset, uint64(3)+tSyncThreshold)
+	ASSERT_EQUAL(t, gf1.timeOffset, uint64(5))
+	ASSERT_EQUAL(t, gf2.timeOffset, uint64(2))
+	ASSERT_EQUAL(t, gf3.timeOffset, uint64(3))
 }
 
 func TestGRFRecoveryWithFormatMAX(t *testing.T) {
@@ -233,9 +234,9 @@ func TestGRFRecoveryWithFormatMAX(t *testing.T) {
 	if err != nil {
 		t.Errorf("error:%v", err)
 	}
-	ASSERT_EQUAL(t, gf1.timeOffset, uint64(10)+tSyncThreshold)
-	ASSERT_EQUAL(t, gf2.timeOffset, uint64(10)+tSyncThreshold)
-	ASSERT_EQUAL(t, gf3.timeOffset, uint64(10)+tSyncThreshold)
+	ASSERT_EQUAL(t, gf1.timeOffset, uint64(10))
+	ASSERT_EQUAL(t, gf2.timeOffset, uint64(10))
+	ASSERT_EQUAL(t, gf3.timeOffset, uint64(10))
 }
 
 func TestGRFUpdateTimeOffsetByGenerate_FormatMAX(t *testing.T) {

@@ -380,9 +380,11 @@ func GRFGetTimeOffset(workerId uint32) uint64 {
 }
 
 func GRFUpdateTimeOffset(workerId uint32, timeOffset uint64) {
-	if GrfStrategy == TSync && GrfLastupdatedtimeoffset[workerId]+tSyncThreshold <= timeOffset {
-		GrfLastupdatedtimeoffset[workerId] = timeOffset
-		writeTimeOffsetInGRF(workerId, timeOffset)
+	if GrfStrategy == TSync {
+		if GrfLastupdatedtimeoffset[workerId]+tSyncThreshold <= timeOffset {
+			GrfLastupdatedtimeoffset[workerId] = timeOffset
+			writeTimeOffsetInGRF(workerId, timeOffset)
+		}
 	} else if GrfStrategy == FSync {
 		writeTimeOffsetInGRF(workerId, timeOffset)
 	} else {
@@ -397,6 +399,9 @@ func GRFSetPath(path string) {
 func GRFSetStrategy(strategy uint8) error {
 	if strategy != FSync && strategy != TSync {
 		return errors.New("GRFSetStrategy error: unknown 'strategy'.")
+	}
+	if GrfStrategy == FSync && strategy == TSync {
+		RemakeGrfLastupdatedtimeoffset()
 	}
 	GrfStrategy = strategy
 	writeStrategyInGRF()
@@ -419,4 +424,12 @@ func SetGrfEnable() {
 
 func SetGrfDisable() {
 	GrfEnable = GRFDisable
+}
+
+func ResetGrfLastupdatedtimeoffset(workerid uint32) {
+	GrfLastupdatedtimeoffset[workerid] = 0
+}
+
+func RemakeGrfLastupdatedtimeoffset() {
+	GrfLastupdatedtimeoffset = make([]uint64, MaxWorkId)
 }
