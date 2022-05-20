@@ -7,6 +7,7 @@ import (
 )
 
 func BenchmarkNormalGenerateId(b *testing.B) {
+	SetGrfDisable()
 	var workerid uint32
 	Gf, err := InitGfNode(workerid)
 	if err != nil {

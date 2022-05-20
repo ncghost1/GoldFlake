@@ -3,12 +3,14 @@ package GoldFlake
 import (
 	"fmt"
 	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func TestNormalGenerateId(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	SetGrfDisable()
+	var createNumGoroutine int32 = 0
 	var workerid uint32 = 1
 	Gf, err := InitGfNode(workerid)
 	count := 0
@@ -19,10 +21,12 @@ func TestNormalGenerateId(t *testing.T) {
 	}
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		var prev uint64 = 0
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -43,15 +47,14 @@ func TestNormalGenerateId(t *testing.T) {
 	close(done)
 	fmt.Println("TestNormalGenerateId: Number of generated ID:", count)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
@@ -72,9 +75,11 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	}
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
@@ -92,9 +97,11 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -115,16 +122,14 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	fmt.Println("TestGenerateIdWithIntervalRandProcess: Number of generated ID:", count)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess: IntervalRandProcess Execution Count:", Randcnt)
 
-	for {
-		// wait for goroutine exit
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
@@ -145,9 +150,11 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	}
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
@@ -164,9 +171,11 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -188,15 +197,14 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	fmt.Println("TestGenerateIdWithIntervalRandProcess_2: Number of generated ID:", count)
 	fmt.Println("TestGenerateIdWithIntervalRandProcess_2: IntervalRandProcess Execution Count:", Randcnt)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 func TestGenerateIdWithRandProcess(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
@@ -216,9 +224,11 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 	}
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				status, err := RandProcess(1, 2, maxTimeOffset)
@@ -234,9 +244,11 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -257,17 +269,16 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 	close(done)
 	fmt.Println("TestGenerateIdWithRandProcess: Number of generated ID:", count)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 // RandProcess can get better performance when at least two cores are used for parallel computing
 // We use GOMAXPROCS(2) in this test.
 func TestGenerateIdWithRandProcess_2(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var workerId uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
@@ -287,9 +298,11 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 	}
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				status, err := RandProcess(1, 2, maxTimeOffset)
@@ -305,9 +318,11 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -323,20 +338,18 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 			}
 		}
 	}()
-
 	time.Sleep(time.Second)
 	close(done)
 	fmt.Println("TestGenerateIdWithRandProcess_2: Number of generated ID:", count)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 func TestSyncGenerateAndRand(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var workerid uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
@@ -357,9 +370,11 @@ func TestSyncGenerateAndRand(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.SyncGenerateAndRand(1, 2, maxTimeOffset)
@@ -380,17 +395,16 @@ func TestSyncGenerateAndRand(t *testing.T) {
 	close(done)
 	fmt.Println("TestSyncGenerateAndRand: Number of generated ID:", count)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 // In fact, we won't get better performance in multi-core,
 // but we still do a comparison test with other.
 func TestSyncGenerateAndRand_2(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var workerid uint32 = 1
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
@@ -411,9 +425,11 @@ func TestSyncGenerateAndRand_2(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.SyncGenerateAndRand(1, 2, maxTimeOffset)
@@ -434,16 +450,15 @@ func TestSyncGenerateAndRand_2(t *testing.T) {
 	close(done)
 	fmt.Println("TestSyncGenerateAndRand_2: Number of generated ID:", count)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }
 
 // This test didn't print anything, just testing a mix of all methods to check if the thread is safe.
 func TestMixGenerate(t *testing.T) {
-	baseNumGoroutine := runtime.NumGoroutine()
+	var createNumGoroutine int32 = 0
 	var maxTimeOffset uint64 = 5
 	var stackSize uint32 = 5
 	var mode int8 = RandProcessSync
@@ -462,9 +477,11 @@ func TestMixGenerate(t *testing.T) {
 	}
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				status, err := RandProcess(1, 2, maxTimeOffset)
@@ -479,9 +496,11 @@ func TestMixGenerate(t *testing.T) {
 	}()
 
 	go func() {
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
@@ -497,9 +516,11 @@ func TestMixGenerate(t *testing.T) {
 
 	go func() {
 		var Gfprev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf.SyncGenerateAndRand(1, 2, maxTimeOffset)
@@ -517,9 +538,11 @@ func TestMixGenerate(t *testing.T) {
 
 	go func() {
 		var Gf_2prev uint64 = 0
+		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
 		for {
 			select {
 			case <-done:
+				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
 				return
 			default:
 				cur, err := Gf_2.Generate()
@@ -538,9 +561,8 @@ func TestMixGenerate(t *testing.T) {
 	time.Sleep(time.Second)
 	close(done)
 
-	for {
-		if baseNumGoroutine == runtime.NumGoroutine() {
-			break
-		}
+	for createNumGoroutine != 0 {
+		// Just wait...
+		runtime.Gosched()
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -55,9 +56,10 @@ type RandValStack struct {
 	top     uint32
 	Size    uint32
 	flag    int8
-	lock    sync.Mutex
+	CAS     uint32
 }
 
+// Global RandValStack
 var RVStack RandValStack
 
 // Pack and return UUID
@@ -71,7 +73,11 @@ func newNode(workerId uint32) (*GoldFlake, error) {
 	if workerId < 0 || workerId > MaxWorkId {
 		return nil, errors.New("invalid worker Id")
 	}
-	return &GoldFlake{workerId: workerId}, nil
+	var timeOffset uint64 = 0
+	if GrfEnable == GRFEnable {
+		timeOffset = GRFGetTimeOffset(workerId)
+	}
+	return &GoldFlake{workerId: workerId, timeOffset: timeOffset}, nil
 }
 
 // Initialize Random Value Stack
@@ -98,6 +104,7 @@ func initRandValStack(Size uint32, Mode int8) error {
 		return errors.New("invalid Mode")
 	}
 	RVStack.flag |= GenerateProcessOccupying
+	RVStack.CAS = 0
 	return nil
 }
 
@@ -110,7 +117,8 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 	rand.Seed(time.Now().UnixNano())
 	if RVStack.flag&GenerateProcessOccupying == 0 {
 		RVStack.flag |= RandProcessOccupying
-		RVStack.lock.Lock()
+		for !atomic.CompareAndSwapUint32(&RVStack.CAS, 0, 1) {
+		}
 		if RVStack.flag&RandProcessSignalEnable != 0 && RVStack.flag&RandProcessSignalDisable != 0 {
 			return RandProcessERR, errors.New("SignalEnable and SignalDisable are present at the same time")
 		}
@@ -125,11 +133,26 @@ func fillWithRandValStack(chanceNumerator, chanceDenominator, maxTimeOffset uint
 			}
 			RVStack.flag &= ^RandProcessOccupying
 		}
-		RVStack.lock.Unlock()
+		for !atomic.CompareAndSwapUint32(&RVStack.CAS, 1, 0) {
+		}
 	} else {
 		return RandProcessNotReady, nil
 	}
 	return RandProcessOK, nil
+}
+
+func RVStackPop(gf *GoldFlake) {
+	for !atomic.CompareAndSwapUint32(&RVStack.CAS, 0, 1) {
+	}
+	if RVStack.top > 0 {
+		RVStack.top--
+		gf.timeOffset += RVStack.randVal[RVStack.top]
+		if GrfEnable == GRFEnable {
+			GRFUpdateTimeOffset(gf.workerId, gf.timeOffset)
+		}
+	}
+	for !atomic.CompareAndSwapUint32(&RVStack.CAS, 1, 0) {
+	}
 }
 
 // Generate and return an UUID
@@ -138,12 +161,7 @@ func (gf *GoldFlake) Generate() (uint64, error) {
 	defer gf.lock.Unlock()
 	if RVStack.flag&RandProcessOccupying == 0 {
 		RVStack.flag |= GenerateProcessOccupying
-		RVStack.lock.Lock()
-		if RVStack.top > 0 {
-			RVStack.top--
-			gf.timeOffset += RVStack.randVal[RVStack.top]
-		}
-		RVStack.lock.Unlock()
+		RVStackPop(gf)
 	}
 	RVStack.flag &= ^GenerateProcessOccupying
 	ts := timestamp() + gf.timeOffset
@@ -176,12 +194,7 @@ func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, max
 	defer gf.lock.Unlock()
 	if RVStack.flag&RandProcessOccupying == 0 {
 		RVStack.flag |= GenerateProcessOccupying
-		RVStack.lock.Lock()
-		if RVStack.top > 0 {
-			RVStack.top--
-			gf.timeOffset += RVStack.randVal[RVStack.top]
-		}
-		RVStack.lock.Unlock()
+		RVStackPop(gf)
 	}
 	RVStack.flag &= ^GenerateProcessOccupying
 	ts := timestamp() + gf.timeOffset
@@ -198,7 +211,6 @@ func (gf *GoldFlake) SyncGenerateAndRand(chanceNumerator, chanceDenominator, max
 		}
 		gf.sequence = 0
 	}
-
 	if ts < gf.lastTimestamp {
 		return 0, errors.New("invalid system clock")
 	}
@@ -248,7 +260,7 @@ func InitRandProcess(Size uint32, Mode int8) error {
 
 // RandProcess
 // When we choose to use the signal method to initialize the stack, we use this.
-// Note: When using Goldflake, this function needs to keep running independently.
+// When using Goldflake, this function needs to keep running independently.
 // Please Use a goroutine and loop this after InitRandProcess:
 // For example:
 //	go func() {
@@ -271,7 +283,7 @@ func RandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint64) (int8
 // The parameter "Interval" is the time of Sleep.
 // Attention: Sleep is not exact, if you want to use this function please test your own machine.
 // We have provided the relevant output "IntervalRandProcess Execution Count" in the "Goldflake_test" file.
-// Note: When using Goldflake, this function needs to keep running independently.
+// When using Goldflake, this function needs to keep running independently.
 // Please Use a goroutine and loop this after InitRandProcess:
 // For example:
 //	go func() {
@@ -293,4 +305,9 @@ func IntervalRandProcess(chanceNumerator, chanceDenominator, maxTimeOffset uint6
 	}
 	time.Sleep(Interval)
 	return status, err
+}
+
+// We provide this API so that others can use this to implement other custom persistence method
+func (Gf *GoldFlake) UpdateTimeOffset(timeOffset uint64) {
+	Gf.timeOffset = timeOffset
 }
