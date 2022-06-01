@@ -21,12 +21,12 @@ func TestNormalGenerateId(t *testing.T) {
 	}
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		var prev uint64 = 0
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -75,11 +75,11 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 	}
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
@@ -97,11 +97,11 @@ func TestGenerateIdWithIntervalRandProcess(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -150,11 +150,11 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 	}
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
@@ -171,11 +171,11 @@ func TestGenerateIdWithIntervalRandProcess_2(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -224,11 +224,11 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 	}
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				status, err := RandProcess(1, 2, maxTimeOffset)
@@ -244,11 +244,11 @@ func TestGenerateIdWithRandProcess(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -298,11 +298,11 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 	}
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				status, err := RandProcess(1, 2, maxTimeOffset)
@@ -318,11 +318,11 @@ func TestGenerateIdWithRandProcess_2(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.Generate()
@@ -370,11 +370,11 @@ func TestSyncGenerateAndRand(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.SyncGenerateAndRand(1, 2, maxTimeOffset)
@@ -425,11 +425,11 @@ func TestSyncGenerateAndRand_2(t *testing.T) {
 
 	go func() {
 		var prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.SyncGenerateAndRand(1, 2, maxTimeOffset)
@@ -477,11 +477,11 @@ func TestMixGenerate(t *testing.T) {
 	}
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				status, err := RandProcess(1, 2, maxTimeOffset)
@@ -496,11 +496,11 @@ func TestMixGenerate(t *testing.T) {
 	}()
 
 	go func() {
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				status, err := IntervalRandProcess(1, 2, maxTimeOffset, time.Millisecond)
@@ -516,11 +516,11 @@ func TestMixGenerate(t *testing.T) {
 
 	go func() {
 		var Gfprev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf.SyncGenerateAndRand(1, 2, maxTimeOffset)
@@ -538,11 +538,11 @@ func TestMixGenerate(t *testing.T) {
 
 	go func() {
 		var Gf_2prev uint64 = 0
-		atomic.StoreInt32(&createNumGoroutine, createNumGoroutine+1)
+		atomic.AddInt32(&createNumGoroutine, 1)
 		for {
 			select {
 			case <-done:
-				atomic.StoreInt32(&createNumGoroutine, createNumGoroutine-1)
+				atomic.AddInt32(&createNumGoroutine, -1)
 				return
 			default:
 				cur, err := Gf_2.Generate()
