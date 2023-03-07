@@ -281,5 +281,5 @@ RandValStack 被 GenerateId 所读写，另一个用来标志 RandValStack 被 R
 
 &emsp;&emsp;要注意这三个方法都会有一种相同的损失，那就是可用id的数量，另外要注意一点本实现和网络上的雪花算法不一样，网络上只利用了41位毫秒时间戳，我们是使用uint64做id，可以利用42位，所以我们原本可用id的基础是可以用大约139年的，所以能够容忍一定损失。什么你跟我说unix时间戳用不了139年？不说139年，如果你的业务id真需要保持60年以上，你为什么不自己写一个新的时间戳啊？(╬▔皿▔)╯<br>
 
-具体可以查看我的个人网站文章：[创造过程](https://www.eririspace.cn/2022/05/12/GoldFlake/)，[劣质のAPI使用文档](https://www.eririspace.cn/2022/05/15/GoldFlake_2/)<br>
-虽然和文章的实现有些出入，但是原理是一样的。🍭🍭
+&emsp;&emsp;具体可以查看我的个人网站文章：[创造过程](https://www.eririspace.cn/2022/05/12/GoldFlake/)，[劣质のAPI使用文档](https://www.eririspace.cn/2022/05/15/GoldFlake_2/)<br>
+&emsp;&emsp;虽然和文章的实现有些出入，但是原理是一样的。🍭🍭
